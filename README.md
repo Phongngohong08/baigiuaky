@@ -95,29 +95,29 @@ npx playwright test
 ### 1. Khởi chạy và build mới hệ thống:
 ```bash
 # Build các image mới và chạy container ở chế độ background (dưới nền)
-docker-compose up -d --build
+docker compose up -d --build
 ```
 
 ### 2. Dừng hệ thống:
 ```bash
 # Dừng và xóa các container nhưng vẫn giữ lại dữ liệu trong volume SQLite
-docker-compose down
+docker compose down
 ```
 
 ### 3. Dừng hệ thống và reset sạch dữ liệu Database:
 ```bash
 # Dừng container và xóa luôn volume lưu database SQLite (khởi tạo lại sạch từ đầu)
-docker-compose down -v
+docker compose down -v
 ```
 
 ### 4. Lệnh dừng rồi build/chạy lại nhanh (Một dòng lệnh):
 ```bash
-docker-compose down && docker-compose up -d --build
+docker compose down && docker compose up -d --build
 ```
 
 ### 5. Xem log trực tiếp của hệ thống:
 ```bash
-docker-compose logs -f
+docker compose logs -f
 ```
 
 *Sau khi chạy, truy cập ứng dụng tại `http://localhost:3000` (Frontend Nginx container tự động proxy mọi API `/api/*` về backend Go container).*
