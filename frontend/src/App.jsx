@@ -1260,9 +1260,6 @@ export default function App() {
       {/* Admin Reset Footer */}
       <footer className="system-footer">
         <div>© 2026 Học Viện Công Nghệ TECHACADEMY. Developed for testing purposes.</div>
-        <button className="btn-reset-system" onClick={handleResetSystem} data-testid="reset-db-btn">
-          Reset Database System
-        </button>
       </footer>
     </div>
   );
