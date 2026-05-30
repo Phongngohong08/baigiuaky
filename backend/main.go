@@ -42,6 +42,12 @@ func main() {
 	mux.HandleFunc("POST /api/courses/{id}/cancel", handlers.CancelCourseHandler)
 	mux.HandleFunc("OPTIONS /api/courses/{id}/cancel", handlers.CancelCourseHandler)
 
+	mux.HandleFunc("POST /api/courses/{id}/wishlist", handlers.ToggleWishlistHandler)
+	mux.HandleFunc("OPTIONS /api/courses/{id}/wishlist", handlers.ToggleWishlistHandler)
+
+	mux.HandleFunc("GET /api/wishlist", handlers.WishlistHandler)
+	mux.HandleFunc("OPTIONS /api/wishlist", handlers.WishlistHandler)
+
 	mux.HandleFunc("POST /api/reset", handlers.ResetHandler)
 	mux.HandleFunc("OPTIONS /api/reset", handlers.ResetHandler)
 

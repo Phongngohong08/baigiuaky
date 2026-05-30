@@ -4,7 +4,7 @@ test.describe('Feature 1: Course Search & Filters', () => {
   
   test.beforeEach(async ({ page, request }) => {
     // Reset database state before each test
-    const resetRes = await request.post('http://localhost:8080/api/reset');
+    const resetRes = await request.post('http://127.0.0.1:8080/api/reset');
     expect(resetRes.ok()).toBeTruthy();
     
     // Go to homepage

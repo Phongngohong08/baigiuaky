@@ -11,7 +11,7 @@ test.describe('Feature 2: Course Reviews', () => {
   
   test.beforeEach(async ({ page, request }) => {
     // Reset database state before each test
-    const resetRes = await request.post('http://localhost:8080/api/reset');
+    const resetRes = await request.post('http://127.0.0.1:8080/api/reset');
     expect(resetRes.ok()).toBeTruthy();
     
     // Go to homepage
@@ -66,7 +66,7 @@ test.describe('Feature 2: Course Reviews', () => {
     // In our UI, star rating defaults to 5. We must trigger 0 stars if we have a way,
     // or simulate sending 0 rating to the API.
     // Let's call the API directly using request to test boundary value 0 stars
-    const res = await page.request.post('http://localhost:8080/api/courses/1/reviews', {
+    const res = await page.request.post('http://127.0.0.1:8080/api/courses/1/reviews', {
       headers: { 'X-User-Email': 'student5@gmail.com' },
       data: { rating: 0, comment: 'Không chọn sao nào' }
     });
@@ -148,12 +148,12 @@ test.describe('Feature 2: Course Reviews', () => {
     await page.locator('[data-testid="review-rating-5"]').click();
     await page.locator('[data-testid="review-comment-input"]').fill('Đang spam bình luận nè!');
     
-    // Click submit twice rapidly with a 10ms delay to prevent event batching but ensure concurrency on the backend
+    // Click submit twice rapidly to ensure concurrency on the backend
     await page.evaluate(() => {
       const btn = document.querySelector('[data-testid="review-submit-btn"]');
       if (btn) {
         btn.click();
-        setTimeout(() => btn.click(), 10);
+        btn.click();
       }
     });
     

@@ -392,12 +392,17 @@ a {
   position: relative;
   height: 200px;
   overflow: hidden;
+  background-color: var(--bg-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .course-img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  padding: 1.5rem;
   transition: var(--transition-smooth);
 }
 
@@ -570,7 +575,9 @@ a {
 .modal-header-img {
   width: 100%;
   height: 250px;
-  object-fit: cover;
+  object-fit: contain;
+  padding: 2rem;
+  background-color: var(--bg-tertiary);
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -1010,3 +1017,83 @@ a {
 .btn-reset-system:hover {
   background: rgba(244, 63, 94, 0.2);
 }
+
+/* Auth Tabs styles */
+.auth-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 1.5rem;
+  gap: 1rem;
+}
+
+.auth-tab-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  font-weight: 700;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  position: relative;
+  transition: var(--transition-fast);
+}
+
+.auth-tab-btn:hover {
+  color: var(--text-primary);
+}
+
+.auth-tab-btn.active {
+  color: var(--accent-light);
+}
+
+.auth-tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent-light);
+  border-radius: 2px;
+}
+
+/* Wishlist Styles */
+.btn-wishlist {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  color: #94a3b8;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.3s ease;
+}
+
+.btn-wishlist:hover {
+  background: rgba(15, 23, 42, 0.8);
+  transform: scale(1.1);
+  color: #ef4444;
+}
+
+.btn-wishlist.active {
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.wishlist-heart {
+  transition: transform 0.2s ease;
+}
+
+.wishlist-heart.filled {
+  fill: #ef4444;
+}
+

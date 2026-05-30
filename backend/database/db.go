@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"backend/models"
+
 	_ "modernc.org/sqlite"
 )
 
@@ -20,7 +21,7 @@ func InitDB(dbPath string) (*sql.DB, error) {
 		return nil, fmt.Errorf("failed to create db directory: %v", err)
 	}
 
-	db, err := sql.Open("sqlite", dbPath)
+	db, err := sql.Open("sqlite", dbPath+"?_pragma=busy_timeout(5000)")
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %v", err)
 	}
@@ -71,6 +72,13 @@ func createTables(db *sql.DB) error {
 			FOREIGN KEY(course_id) REFERENCES courses(id),
 			UNIQUE(course_id, user_email)
 		);`,
+		`CREATE TABLE IF NOT EXISTS wishlist (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			user_email TEXT NOT NULL,
+			course_id INTEGER NOT NULL,
+			FOREIGN KEY(course_id) REFERENCES courses(id),
+			UNIQUE(user_email, course_id)
+		);`,
 	}
 
 	for _, q := range queries {
@@ -82,65 +90,73 @@ func createTables(db *sql.DB) error {
 }
 
 func SeedData(db *sql.DB) error {
+	seedCourses := []models.Course{
+		{
+			Title:       "Golang Cơ Bản Cho Người Mới Bắt Đầu",
+			Description: "Học lập trình Go từ cơ bản đến xây dựng các ứng dụng CLI và Web API đầu tiên. Phù hợp cho lập trình viên mới bắt đầu hành trình backend.",
+			Instructor:  "Nguyễn Văn A",
+			Price:       0.0,
+			Category:    "Go",
+			ImageURL:    "/images/go.svg",
+		},
+		{
+			Title:       "Lập trình Golang Nâng Cao & Microservices",
+			Description: "Xây dựng hệ thống microservices hiệu năng cao bằng Go, gRPC, Docker, Kafka và cấu trúc clean architecture.",
+			Instructor:  "Trần Thị B",
+			Price:       49.99,
+			Category:    "Go",
+			ImageURL:    "/images/go-advanced.svg",
+		},
+		{
+			Title:       "ReactJS Premium & Mastery",
+			Description: "Làm chủ React 18+, State Management, Hooks, Custom Hooks và triển khai dự án thực tế với hiệu năng tối ưu nhất.",
+			Instructor:  "Phạm Văn C",
+			Price:       29.99,
+			Category:    "Frontend",
+			ImageURL:    "/images/react.svg",
+		},
+		{
+			Title:       "CSS & Design System Cho Lập Trình Viên",
+			Description: "Tự thiết kế giao diện UI/UX đẹp mắt, xây dựng hệ thống CSS Variables, Responsive Design và Animation cao cấp mà không cần Tailwind.",
+			Instructor:  "Lê Thị D",
+			Price:       0.0,
+			Category:    "Frontend",
+			ImageURL:    "/images/css.svg",
+		},
+		{
+			Title:       "Docker & Kubernetes Từ Zero Đến Hero",
+			Description: "Học cách đóng gói ứng dụng, triển khai CI/CD và quản lý hạ tầng container Kubernetes một cách chuyên nghiệp.",
+			Instructor:  "Hoàng Văn E",
+			Price:       79.99,
+			Category:    "DevOps",
+			ImageURL:    "/images/docker.svg",
+		},
+		{
+			Title:       "Xây Dựng SaaS Fullstack Với Next.js 14",
+			Description: "Phát triển ứng dụng Web SaaS thương mại hóa với Next.js App Router, Prisma, PostgreSQL và tích hợp Stripe thanh toán.",
+			Instructor:  "Vũ Thị F",
+			Price:       59.99,
+			Category:    "Frontend",
+			ImageURL:    "/images/nextjs.svg",
+		},
+	}
+
 	// Check if already seeded
 	var count int
 	err := db.QueryRow("SELECT COUNT(*) FROM courses").Scan(&count)
 	if err != nil {
 		return err
 	}
-	if count > 0 {
-		return nil // Already seeded
-	}
 
-	seedCourses := []models.Course{
-		{
-			Title:        "Golang Cơ Bản Cho Người Mới Bắt Đầu",
-			Description:  "Học lập trình Go từ cơ bản đến xây dựng các ứng dụng CLI và Web API đầu tiên. Phù hợp cho lập trình viên mới bắt đầu hành trình backend.",
-			Instructor:   "Nguyễn Văn A",
-			Price:        0.0,
-			Category:     "Go",
-			ImageURL:     "https://images.unsplash.com/photo-1618401471353-b98aedd07871?w=600&auto=format&fit=crop&q=60",
-		},
-		{
-			Title:        "Lập trình Golang Nâng Cao & Microservices",
-			Description:  "Xây dựng hệ thống microservices hiệu năng cao bằng Go, gRPC, Docker, Kafka và cấu trúc clean architecture.",
-			Instructor:   "Trần Thị B",
-			Price:        49.99,
-			Category:     "Go",
-			ImageURL:     "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=600&auto=format&fit=crop&q=60",
-		},
-		{
-			Title:        "ReactJS Premium & Mastery",
-			Description:  "Làm chủ React 18+, State Management, Hooks, Custom Hooks và triển khai dự án thực tế với hiệu năng tối ưu nhất.",
-			Instructor:   "Phạm Văn C",
-			Price:        29.99,
-			Category:     "Frontend",
-			ImageURL:     "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=600&auto=format&fit=crop&q=60",
-		},
-		{
-			Title:        "CSS & Design System Cho Lập Trình Viên",
-			Description:  "Tự thiết kế giao diện UI/UX đẹp mắt, xây dựng hệ thống CSS Variables, Responsive Design và Animation cao cấp mà không cần Tailwind.",
-			Instructor:   "Lê Thị D",
-			Price:        0.0,
-			Category:     "Frontend",
-			ImageURL:     "https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=600&auto=format&fit=crop&q=60",
-		},
-		{
-			Title:        "Docker & Kubernetes Từ Zero Đến Hero",
-			Description:  "Học cách đóng gói ứng dụng, triển khai CI/CD và quản lý hạ tầng container Kubernetes một cách chuyên nghiệp.",
-			Instructor:   "Hoàng Văn E",
-			Price:        79.99,
-			Category:     "DevOps",
-			ImageURL:     "https://images.unsplash.com/photo-1607799279861-4dd421887fb3?w=600&auto=format&fit=crop&q=60",
-		},
-		{
-			Title:        "Xây Dựng SaaS Fullstack Với Next.js 14",
-			Description:  "Phát triển ứng dụng Web SaaS thương mại hóa với Next.js App Router, Prisma, PostgreSQL và tích hợp Stripe thanh toán.",
-			Instructor:   "Vũ Thị F",
-			Price:        59.99,
-			Category:     "Frontend",
-			ImageURL:     "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=600&auto=format&fit=crop&q=60",
-		},
+	if count > 0 {
+		// Update image URLs for existing courses to make sure they match db.go
+		for _, c := range seedCourses {
+			_, err = db.Exec("UPDATE courses SET image_url = ? WHERE title = ?", c.ImageURL, c.Title)
+			if err != nil {
+				log.Printf("Warning: failed to update image URL for %s: %v", c.Title, err)
+			}
+		}
+		return nil // Already seeded
 	}
 
 	for _, c := range seedCourses {
@@ -183,6 +199,7 @@ func SeedData(db *sql.DB) error {
 
 func ResetDB(db *sql.DB, dbPath string) error {
 	// Drop tables
+	_, _ = db.Exec("DROP TABLE IF EXISTS wishlist")
 	_, _ = db.Exec("DROP TABLE IF EXISTS registrations")
 	_, _ = db.Exec("DROP TABLE IF EXISTS reviews")
 	_, _ = db.Exec("DROP TABLE IF EXISTS courses")

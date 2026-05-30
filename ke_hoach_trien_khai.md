@@ -108,6 +108,18 @@ Nhóm sẽ thực hiện tổng cộng **30 kịch bản test** cho 3 tính năn
 *   **TC-29:** Nhập mã giảm giá đã hết hạn -> Báo lỗi mã không hợp lệ.
 *   **TC-30 (FAILED Ý ĐỒ):** Click đăng ký khóa học trả phí nhưng giả lập lỗi mạng / hủy thanh toán -> *Ý đồ lỗi:* Backend vẫn ghi nhận đăng ký thành công và cho phép vào học mà không cần thanh toán (lỗi logic nghiệp vụ cực kỳ nghiêm trọng, rất thích hợp để làm báo cáo kiểm thử).
 
+### Tính năng 4: Khóa học yêu thích (Wishlist) (10 Test Cases)
+*   **TC-31:** Thêm khóa học vào danh sách yêu thích thành công khi đã đăng nhập.
+*   **TC-32:** Thêm khóa học vào danh sách yêu thích khi chưa đăng nhập -> Tự động kích hoạt hiển thị modal Đăng nhập.
+*   **TC-33:** Click bỏ yêu thích từ trang chủ (Explore) -> Trái tim trở về trạng thái viền xám rỗng.
+*   **TC-34:** Kiểm tra trạng thái trống của tab "Yêu thích" khi người dùng chưa thích khóa học nào.
+*   **TC-35:** Khóa học được yêu thích xuất hiện chính xác trong tab "Yêu thích".
+*   **TC-36:** Click vào nút Chi tiết của khóa học trong tab "Yêu thích" -> Hiển thị đúng thông tin và mở modal chi tiết khóa học.
+*   **TC-37:** Đăng ký học trực tiếp khóa học từ tab "Yêu thích" thành công.
+*   **TC-38:** Xóa khóa học khỏi danh sách yêu thích trực tiếp từ tab "Yêu thích" -> Khóa học biến mất ngay lập tức khỏi giao diện tab "Yêu thích".
+*   **TC-39:** Kiểm tra đồng bộ trạng thái: Đăng ký một khóa học trong danh sách yêu thích sẽ cập nhật trạng thái thành "Đã đăng ký" trong cả tab "Yêu thích" và tab "Khám phá" ngay lập tức.
+*   **TC-40 (FAILED Ý ĐỒ):** Click liên tục (Spam) nút yêu thích khóa học -> *Ý đồ lỗi:* Frontend không disable nút bấm hoặc không áp dụng debounce/throttle, backend bị lỗi xung đột UNIQUE constraint của SQLite và trả về lỗi HTTP 500 khiến Playwright phát hiện lỗi.
+
 ---
 
 ## 6. Quy trình phối hợp triển khai tiếp theo

@@ -473,3 +473,119 @@ func ResetHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"message": "Database reset successfully"})
 }
+
+func ToggleWishlistHandler(w http.ResponseWriter, r *http.Request) {
+	EnableCors(&w)
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	idStr := r.PathValue("id")
+	courseID, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Invalid course ID", http.StatusBadRequest)
+		return
+	}
+
+	userEmail := r.Header.Get("X-User-Email")
+	if userEmail == "" {
+		http.Error(w, "Unauthorized: Vui lòng đăng nhập", http.StatusUnauthorized)
+		return
+	}
+
+	db := database.DB
+
+	// Check if already in wishlist
+	var exists bool
+	err = db.QueryRow("SELECT EXISTS(SELECT 1 FROM wishlist WHERE user_email = ? AND course_id = ?)", userEmail, courseID).Scan(&exists)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if exists {
+		// Remove from wishlist
+		_, err = db.Exec("DELETE FROM wishlist WHERE user_email = ? AND course_id = ?", userEmail, courseID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(map[string]string{
+			"action":  "removed",
+			"message": "Đã xóa khỏi danh sách yêu thích",
+		})
+		return
+	}
+
+	// TC-40 Bug: Delay database insert slightly to allow concurrent race condition when spam click
+	time.Sleep(150 * time.Millisecond)
+
+	// Add to wishlist
+	_, err = db.Exec("INSERT INTO wishlist (user_email, course_id) VALUES (?, ?)", userEmail, courseID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]string{
+		"action":  "added",
+		"message": "Đã thêm vào danh sách yêu thích",
+	})
+}
+
+func WishlistHandler(w http.ResponseWriter, r *http.Request) {
+	EnableCors(&w)
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	userEmail := r.Header.Get("X-User-Email")
+	if userEmail == "" {
+		http.Error(w, "Unauthorized: Vui lòng đăng nhập", http.StatusUnauthorized)
+		return
+	}
+
+	db := database.DB
+
+	rows, err := db.Query(`
+		SELECT c.id, c.title, c.description, c.instructor, c.price, c.category, c.rating, c.reviews_count, c.image_url 
+		FROM courses c
+		JOIN wishlist w ON c.id = w.course_id
+		WHERE w.user_email = ?
+	`, userEmail)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var courses []models.Course
+	for rows.Next() {
+		var c models.Course
+		err := rows.Scan(&c.ID, &c.Title, &c.Description, &c.Instructor, &c.Price, &c.Category, &c.Rating, &c.ReviewsCount, &c.ImageURL)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		courses = append(courses, c)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(courses)
+}

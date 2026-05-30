@@ -11,7 +11,7 @@ test.describe('Feature 3: Course Registration & Checkout', () => {
   
   test.beforeEach(async ({ page, request }) => {
     // Reset database state before each test
-    const resetRes = await request.post('http://localhost:8080/api/reset');
+    const resetRes = await request.post('http://127.0.0.1:8080/api/reset');
     expect(resetRes.ok()).toBeTruthy();
     
     // Go to homepage
@@ -78,7 +78,7 @@ test.describe('Feature 3: Course Registration & Checkout', () => {
     await expect(page.locator('[data-testid="registered-badge-1"]')).toBeVisible();
     
     // Directly calling API to try registering again should fail
-    const res = await page.request.post('http://localhost:8080/api/courses/1/register', {
+    const res = await page.request.post('http://127.0.0.1:8080/api/courses/1/register', {
       headers: { 'X-User-Email': 'student5@gmail.com' }
     });
     expect(res.status()).toBe(400);
@@ -124,10 +124,10 @@ test.describe('Feature 3: Course Registration & Checkout', () => {
   test('TC-27: Maximum student limit validation', async ({ page, request }) => {
     // Course ID 5 (Docker) has limit of 2 registrations.
     // Register 2 other accounts directly via API
-    await request.post('http://localhost:8080/api/courses/5/register', {
+    await request.post('http://127.0.0.1:8080/api/courses/5/register', {
       headers: { 'X-User-Email': 'other1@gmail.com' }
     });
-    await request.post('http://localhost:8080/api/courses/5/register', {
+    await request.post('http://127.0.0.1:8080/api/courses/5/register', {
       headers: { 'X-User-Email': 'other2@gmail.com' }
     });
     
