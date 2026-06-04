@@ -13,8 +13,244 @@ import {
   Sparkles, 
   AlertCircle,
   CreditCard,
-  Heart
+  Heart,
+  Play,
+  Pause,
+  Volume2,
+  RotateCcw,
+  Send
 } from 'lucide-react';
+
+const COURSE_LESSONS = {
+  1: [
+    {
+      title: "Bài 1: Giới thiệu Golang & Cài đặt môi trường học tập",
+      duration: "10:15",
+      content: "Tìm hiểu nguồn gốc của Golang, tại sao các tập đoàn công nghệ lớn tin dùng. Hướng dẫn tải và cài đặt Go SDK bản mới nhất, cấu hình biến môi trường PATH và cài đặt VS Code với Go Extension.",
+      exercise: "Cài đặt Go thành công trên máy cá nhân, chạy lệnh 'go version' trong terminal và dán kết quả phiên bản Go bạn vừa cài đặt."
+    },
+    {
+      title: "Bài 2: Cú pháp cơ bản, Biến, Kiểu dữ liệu & Con trỏ trong Go",
+      duration: "15:30",
+      content: "Học cách khai báo biến bằng var, const và toán tử gán nhanh :=. Phân biệt các kiểu dữ liệu cơ bản (string, int, bool, float) và tìm hiểu cơ chế hoạt động của con trỏ (pointer) để quản lý ô nhớ.",
+      exercise: "Viết chương trình tráo đổi giá trị của 2 biến số nguyên a và b sử dụng tham chiếu con trỏ."
+    },
+    {
+      title: "Bài 3: Điều khiển luồng: Câu lệnh điều kiện if-else & Vòng lặp for",
+      duration: "12:45",
+      content: "Làm chủ cấu trúc rẽ nhánh if-else, câu lệnh switch-case tối ưu và vòng lặp duy nhất trong Go: vòng lặp for (bao gồm for truyền thống, for-range và mô phỏng while).",
+      exercise: "Viết vòng lặp for in ra các số lẻ từ 1 đến 20, bỏ qua số 13 sử dụng từ khóa 'continue'."
+    },
+    {
+      title: "Bài 4: Cấu trúc dữ liệu: Array, Slice, Map & Struct",
+      duration: "18:20",
+      content: "Tìm hiểu cách lưu trữ tập hợp dữ liệu bằng Array cố định kích thước, Slice linh hoạt động, Map dạng key-value và định nghĩa đối tượng dữ liệu tùy chỉnh bằng Struct.",
+      exercise: "Định nghĩa struct Student gồm Name (string) và Grade (float). Tạo một map lưu danh sách Student theo ID kiểu string."
+    },
+    {
+      title: "Bài 5: Định nghĩa hàm, Method và Interface cơ bản",
+      duration: "14:10",
+      content: "Cách viết hàm nhận nhiều tham số và trả về nhiều giá trị. Gắn hàm vào Struct (Method) và định nghĩa giao ước Interface để viết code hướng đối tượng theo phong cách Go.",
+      exercise: "Viết interface Shape có method Area() float64. Định nghĩa struct Circle và triển khai method Area() tính diện tích hình tròn."
+    },
+    {
+      title: "Bài 6: Thực hành: Xây dựng ứng dụng CLI quản lý tác vụ",
+      duration: "25:40",
+      content: "Kết hợp toàn bộ kiến thức để xây dựng một ứng dụng dòng lệnh (CLI Todo App) cho phép thêm, sửa, xóa và hiển thị danh sách công việc cần làm, ghi vào file văn bản.",
+      exercise: "Mở rộng Todo App thêm tính năng đánh dấu công việc đã hoàn thành (Done) và lọc các tác vụ chưa làm."
+    }
+  ],
+  2: [
+    {
+      title: "Bài 1: Concurrency nâng cao: Goroutines, Channels & Select",
+      duration: "18:30",
+      content: "Đi sâu vào cơ chế xử lý đồng thời cực mạnh của Go. Học cách chạy hàm song song với Goroutine siêu nhẹ, truyền tin an toàn qua Channel và lắng nghe nhiều kênh với Select.",
+      exercise: "Viết chương trình dùng channel để gửi kết quả tính bình phương từ goroutine con về hàm main."
+    },
+    {
+      title: "Bài 2: Đồng bộ hóa tiến trình: Mutex, WaitGroup & Context",
+      duration: "16:15",
+      content: "Quản lý tranh chấp tài nguyên (Race Condition) bằng Mutex, đồng bộ hóa các luồng chạy với WaitGroup và kiểm soát vòng đời, thời gian chờ của tiến trình qua Context.",
+      exercise: "Sử dụng sync.Mutex để giải quyết bài toán tăng biến đếm toàn cục an toàn từ 1000 goroutine chạy song song."
+    },
+    {
+      title: "Bài 3: Thiết kế API RESTful chuẩn chính với Clean Architecture",
+      duration: "22:10",
+      content: "Thiết kế cấu trúc dự án chuẩn doanh nghiệp, chia lớp rõ ràng (Domain, Repository, Usecase, Delivery) giúp code dễ bảo trì, dễ viết unit test.",
+      exercise: "Phác thảo cấu trúc thư mục dự án Go REST API theo Clean Architecture."
+    },
+    {
+      title: "Bài 4: Xây dựng hệ thống Microservices sử dụng gRPC & Protocol Buffers",
+      duration: "20:45",
+      content: "Tìm hiểu kiến trúc Microservice, giao tiếp hiệu năng cao giữa các service thông qua gRPC protocol và tối ưu payload với Protocol Buffers.",
+      exercise: "Viết một tệp protobuf định nghĩa service User với method GetUserProfile."
+    },
+    {
+      title: "Bài 5: Message Broker: Kết nối hệ thống với Apache Kafka / RabbitMQ",
+      duration: "24:30",
+      content: "Ứng dụng cơ chế bất đồng bộ cho hệ thống lớn. Cách tích hợp Kafka/RabbitMQ để truyền nhận message giữa các microservice độc lập.",
+      exercise: "Viết hàm Producer gửi sự kiện 'user_registered' lên một Kafka topic giả lập."
+    },
+    {
+      title: "Bài 6: Thực hành: Xây dựng hệ thống Payment Gateway chịu tải lớn",
+      duration: "30:00",
+      content: "Tích hợp và xây dựng cổng thanh toán trực tuyến mô phỏng, xử lý giao dịch đồng thời lớn, đảm bảo tính nhất quán dữ liệu (Transaction) và hạn chế lỗi double-spending.",
+      exercise: "Viết code xử lý kiểm tra số dư và trừ tiền tài khoản an toàn trong cơ sở dữ liệu."
+    }
+  ],
+  3: [
+    {
+      title: "Bài 1: Ôn tập cơ chế render của React & React Virtual DOM",
+      duration: "11:20",
+      content: "Hiểu rõ cách React quản lý cây DOM ảo (Virtual DOM), cơ chế so khớp (Reconciliation) và giải thuật Diffing để cập nhật giao diện một cách tối ưu.",
+      exercise: "Giải thích tại sao việc dùng index làm 'key' khi render list trong React lại có thể gây lỗi UI."
+    },
+    {
+      title: "Bài 2: Deep-dive React Hooks: useEffect, useMemo, useCallback",
+      duration: "15:45",
+      content: "Làm chủ cơ chế hoạt động của useEffect cleanup function, tối ưu hóa tính toán nặng với useMemo và tránh tạo lại hàm thừa thãi với useCallback.",
+      exercise: "Viết một component sử dụng useCallback để truyền callback function xuống component con mà không bị re-render không cần thiết."
+    },
+    {
+      title: "Bài 3: Xây dựng Custom Hooks chuyên nghiệp để tái sử dụng logic",
+      duration: "14:50",
+      content: "Học cách trích xuất logic trạng thái phức tạp ra ngoài component thành các custom hooks như useFetch, useLocalStorage, useDebounce tái sử dụng linh hoạt.",
+      exercise: "Tự viết custom hook 'useLocalStorage(key, initialValue)' để đồng bộ state với LocalStorage."
+    },
+    {
+      title: "Bài 4: State Management: Quản lý state toàn cục với Zustand & Redux Toolkit",
+      duration: "21:15",
+      content: "So sánh các mô hình quản lý state toàn cục. Hướng dẫn tích hợp thư viện nhẹ nhàng Zustand và thư viện chuẩn công nghiệp Redux Toolkit.",
+      exercise: "Cấu hình một store Zustand đơn giản để quản lý trạng thái đăng nhập và giỏ hàng của ứng dụng."
+    },
+    {
+      title: "Bài 5: Tối ưu hóa hiệu năng render & Lazy Loading Components",
+      duration: "17:30",
+      content: "Sử dụng React.lazy và Suspense để phân tách code (code-splitting). Áp dụng React.memo để ngăn chặn re-render không đáng có cho component tĩnh.",
+      exercise: "Sử dụng React.lazy để tải chậm một modal chi tiết sản phẩm nặng."
+    },
+    {
+      title: "Bài 6: Thực hành: Viết bộ thư viện UI Kit có hỗ trợ Dark Mode",
+      duration: "28:10",
+      content: "Xây dựng các component nền tảng (Button, Card, Input) có tính tùy biến cao, hỗ trợ chuyển đổi giao diện sáng/tối (Dark/Light mode) mượt mà.",
+      exercise: "Thiết kế component Button nhận các props size, variant (primary, secondary) có hỗ trợ CSS variables cho Dark Mode."
+    }
+  ],
+  4: [
+    {
+      title: "Bài 1: Làm chủ Flexbox & Grid trong các bố cục phức tạp",
+      duration: "12:00",
+      content: "Nắm vững các thuộc tính căn chỉnh nâng cao của CSS Flexbox (align-items, justify-content, flex-grow) và chia lưới đa chiều phức tạp bằng Grid Layout.",
+      exercise: "Xây dựng bố cục 3 cột (Holy Grail Layout) sử dụng Grid Layout đáp ứng tốt trên mọi thiết bị."
+    },
+    {
+      title: "Bài 2: Xây dựng Design System chuyên nghiệp bằng CSS Variables",
+      duration: "14:15",
+      content: "Thiết lập hệ thống màu sắc, kiểu chữ, khoảng cách thống nhất bằng CSS Custom Properties. Dễ dàng bảo trì và đổi chủ đề toàn trang.",
+      exercise: "Khai báo bộ biến CSS cho bảng màu chính gồm primary, secondary, danger, warning ở root."
+    },
+    {
+      title: "Bài 3: Thiết kế Responsive nâng cao cho mọi loại màn hình",
+      duration: "15:00",
+      content: "Sử dụng Media Queries đúng chuẩn, thiết lập breakpoint thông minh và làm việc với các đơn vị tương đối (em, rem, vh, vw, clamp).",
+      exercise: "Sử dụng hàm clamp() của CSS để tạo font-size co giãn mượt mà từ màn hình Mobile đến Desktop mà không cần Media Queries."
+    },
+    {
+      title: "Bài 4: Tạo hiệu ứng động: CSS Keyframe Animations & Transitions",
+      duration: "16:20",
+      content: "Học cách tạo ra các chuyển động mượt mà (transitions) và các hoạt ảnh tùy chỉnh phức tạp (@keyframes) giúp tăng trải nghiệm người dùng tương tác.",
+      exercise: "Tạo hiệu ứng nút bấm nảy nhẹ (pulse animation) liên tục bằng CSS @keyframes."
+    },
+    {
+      title: "Bài 5: Xu hướng thiết kế hiện đại: Glassmorphism & Claymorphism",
+      duration: "11:45",
+      content: "Kỹ thuật tạo giao diện kính mờ sang trọng bằng backdrop-filter và box-shadow đa lớp. Tạo hiệu ứng đất sét 3D mềm mại.",
+      exercise: "Thiết kế một thẻ Card có hiệu ứng kính mờ (Glassmorphism) trên nền gradient nhiều màu sắc."
+    },
+    {
+      title: "Bài 6: Thực hành: Thiết kế trang Landing Page có hiệu ứng Parallax",
+      duration: "26:30",
+      content: "Ứng dụng toàn bộ kiến thức CSS nâng cao để tạo một trang đích (Landing Page) giới thiệu sản phẩm có hiệu ứng cuộn trang Parallax sống động.",
+      exercise: "Tạo cấu trúc HTML/CSS cuộn nhiều lớp hình nền với tốc độ khác nhau tạo hiệu ứng 3D chiều sâu."
+    }
+  ],
+  5: [
+    {
+      title: "Bài 1: Hiểu sâu về Containerization và kiến trúc Docker Engine",
+      duration: "14:50",
+      content: "Phân biệt ảo hóa máy ảo (VM) và ảo hóa container. Kiến trúc Docker Engine gồm Client, Host và Registry. Cách hoạt động của Namespace và Cgroups.",
+      exercise: "Giải thích ngắn gọn sự khác nhau về dung lượng và tốc độ khởi động giữa Container và Virtual Machine."
+    },
+    {
+      title: "Bài 2: Viết Dockerfile chuẩn production để tối ưu hóa dung lượng image",
+      duration: "17:15",
+      content: "Cách viết Dockerfile, các lệnh cơ bản (FROM, RUN, COPY, CMD). Kỹ thuật Multi-stage build để giảm dung lượng file ảnh xuống tối thiểu cho môi trường sản phẩm.",
+      exercise: "Viết Dockerfile hai giai đoạn (multi-stage) để build và đóng gói một ứng dụng Go/Node.js."
+    },
+    {
+      title: "Bài 3: Quản lý Network và Volume lưu trữ trong Docker",
+      duration: "15:40",
+      content: "Tìm hiểu cách các container giao tiếp qua Bridge, Host, Overlay networks. Sử dụng Volume và Bind Mount để lưu trữ dữ liệu bền vững ngoài vòng đời container.",
+      exercise: "Chạy một container PostgreSQL và gán volume để dữ liệu không bị mất đi khi container bị restart."
+    },
+    {
+      title: "Bài 4: Điều phối đa container với Docker Compose nâng cao",
+      duration: "18:20",
+      content: "Viết tệp docker-compose.yml để định nghĩa hệ thống gồm App, DB và Cache. Quản lý biến môi trường, mối quan hệ dependencies (depends_on).",
+      exercise: "Thiết lập docker-compose chạy đồng thời ứng dụng Web React và API Node.js kết nối chung một mạng ảo."
+    },
+    {
+      title: "Bài 5: Khởi đầu với Kubernetes: Pod, Service, ReplicaSet & Deployment",
+      duration: "22:30",
+      content: "Giới thiệu hệ điều hành đám mây Kubernetes. Tìm hiểu thành phần cơ bản: Pod chạy container, ReplicaSet quản lý số lượng bản sao, Service định tuyến lưu lượng.",
+      exercise: "Viết tệp YAML định nghĩa Deployment cho ứng dụng web với số lượng 3 replicas."
+    },
+    {
+      title: "Bài 6: Thực hành: Viết CI/CD pipeline tự động build và deploy lên K8s Cluster",
+      duration: "32:00",
+      content: "Xây dựng quy trình tự động hóa tích hợp và triển khai liên tục (CI/CD) bằng GitHub Actions. Tự động build Docker Image, push lên Registry và cập nhật K8s Cluster.",
+      exercise: "Viết tệp cấu hình Github Action (.yml) kích hoạt khi push code mới để chạy test tự động."
+    }
+  ],
+  6: [
+    {
+      title: "Bài 1: Next.js App Router: Server Components vs Client Components",
+      duration: "15:30",
+      content: "Làm chủ mô hình render mới của Next.js 14. Hiểu khi nào sử dụng Server Components để tối ưu SEO, tốc độ tải và khi nào sử dụng Client Components cho tương tác người dùng.",
+      exercise: "Viết một component lấy dữ liệu từ API trực tiếp trên Server (Server Component) bằng hàm fetch bất đồng bộ."
+    },
+    {
+      title: "Bài 2: Routing nâng cao, Parallel Routes & Intercepting Routes",
+      duration: "16:45",
+      content: "Tận dụng hệ thống định tuyến dựa trên thư mục của Next.js. Tạo layout lồng nhau, định tuyến song song và chặn luồng điều hướng để tạo trải nghiệm modal mượt mà.",
+      exercise: "Tạo cấu trúc thư mục định nghĩa dynamic route `/products/[id]` hiển thị chi tiết sản phẩm."
+    },
+    {
+      title: "Bài 3: Server Actions: Giao tiếp dữ liệu không cần API endpoints",
+      duration: "18:20",
+      content: "Sử dụng Server Actions để gọi trực tiếp các hàm chạy trên server từ component client thông qua biểu mẫu Form. Tự động bảo mật và tích hợp CSRF protection.",
+      exercise: "Viết một Form đăng ký bản tin sử dụng Server Action để thêm email vào cơ sở dữ liệu."
+    },
+    {
+      title: "Bài 4: Tích hợp ORM Prisma, Postgres & Thiết kế DB Schema",
+      duration: "20:50",
+      content: "Kết nối Next.js với cơ sở dữ liệu PostgreSQL thông qua Prisma ORM. Thiết kế mô hình cơ sở dữ liệu quan hệ (1-n, n-n) và chạy lệnh migration.",
+      exercise: "Định nghĩa Prisma Schema gồm model User và Post với quan hệ một-nhiều (One-to-Many)."
+    },
+    {
+      title: "Bài 5: Tích hợp Stripe Payment: Cấu hình Webhook & Stripe Checkout",
+      duration: "25:00",
+      content: "Quy trình thanh toán trực tuyến an toàn. Tích hợp cổng thanh toán Stripe Checkout, cấu hình Stripe Webhook để lắng nghe sự kiện thanh toán thành công và cập nhật DB.",
+      exercise: "Giải thích vai trò của Webhook trong Stripe Payment và tại sao không nên cập nhật trạng thái đơn hàng trực tiếp từ Client."
+    },
+    {
+      title: "Bài 6: Thực hành: Deploy dự án SaaS hoàn chỉnh lên Vercel & Supabase",
+      duration: "30:00",
+      content: "Đóng gói toàn bộ ứng dụng SaaS thương mại hóa. Triển khai frontend Next.js lên nền tảng đám mây Vercel và cấu hình cơ sở dữ liệu đám mây Supabase Postgres.",
+      exercise: "Thực hiện cấu hình các biến môi trường Production (DATABASE_URL, STRIPE_SECRET_KEY) trên trang quản lý Vercel."
+    }
+  ]
+};
 
 export default function App() {
   // Authentication
@@ -59,6 +295,133 @@ export default function App() {
   // Toast notifications
   const [toast, setToast] = useState(null);
   const [globalError, setGlobalError] = useState('');
+
+  // Course Learning Hub State
+  const [activeLessonIndex, setActiveLessonIndex] = useState(null); // lesson index (0-5) or null for overview
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+  const [videoProgress, setVideoProgress] = useState(0); // in seconds
+  const [homeworkAnswer, setHomeworkAnswer] = useState('');
+  const [homeworkSubmitted, setHomeworkSubmitted] = useState({}); // key: course_id-lesson_idx
+  const [completedLessons, setCompletedLessons] = useState({}); // key: course_id
+
+  // Load completed lessons & homework from localStorage
+  useEffect(() => {
+    if (userEmail && selectedCourse) {
+      const key = `techacademy_completed_${userEmail}_${selectedCourse.id}`;
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          setCompletedLessons(prev => ({
+            ...prev,
+            [selectedCourse.id]: parsed
+          }));
+        } catch (e) {
+          console.error(e);
+        }
+      } else {
+        setCompletedLessons(prev => ({
+          ...prev,
+          [selectedCourse.id]: []
+        }));
+      }
+
+      const hwKey = `techacademy_hw_${userEmail}_${selectedCourse.id}`;
+      const savedHw = localStorage.getItem(hwKey);
+      if (savedHw) {
+        try {
+          const parsed = JSON.parse(savedHw);
+          setHomeworkSubmitted(prev => ({
+            ...prev,
+            ...parsed
+          }));
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+  }, [userEmail, selectedCourse]);
+
+  // Simulated Video Player Timer Effect
+  useEffect(() => {
+    let interval = null;
+    if (isVideoPlaying && selectedCourse && activeLessonIndex !== null) {
+      const lessons = COURSE_LESSONS[selectedCourse.id] || [];
+      const lesson = lessons[activeLessonIndex];
+      if (lesson) {
+        const parts = lesson.duration.split(':');
+        const maxSeconds = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+        
+        interval = setInterval(() => {
+          setVideoProgress(prev => {
+            if (prev >= maxSeconds) {
+              setIsVideoPlaying(false);
+              return 0; // Reset at completion
+            }
+            return prev + 1;
+          });
+        }, 1000);
+      }
+    } else {
+      clearInterval(interval);
+    }
+    return () => clearInterval(interval);
+  }, [isVideoPlaying, selectedCourse, activeLessonIndex]);
+
+  // Toggle lesson completion status
+  const handleToggleLessonCompleted = (courseId, lessonIdx) => {
+    if (!userEmail) return;
+    const currentCompleted = completedLessons[courseId] || [];
+    let newCompleted;
+    if (currentCompleted.includes(lessonIdx)) {
+      newCompleted = currentCompleted.filter(idx => idx !== lessonIdx);
+    } else {
+      newCompleted = [...currentCompleted, lessonIdx];
+    }
+
+    setCompletedLessons(prev => ({
+      ...prev,
+      [courseId]: newCompleted
+    }));
+
+    const key = `techacademy_completed_${userEmail}_${courseId}`;
+    localStorage.setItem(key, JSON.stringify(newCompleted));
+    showToast(currentCompleted.includes(lessonIdx) ? 'Đã hủy đánh dấu hoàn thành bài học' : 'Đã đánh dấu hoàn thành bài học!');
+  };
+
+  // Submit homework
+  const handleSubmitHomework = (courseId, lessonIdx) => {
+    if (!homeworkAnswer.trim()) {
+      showToast('Vui lòng nhập câu trả lời bài tập', 'error');
+      return;
+    }
+
+    const submissionKey = `${courseId}-${lessonIdx}`;
+    const newSubmissions = {
+      ...homeworkSubmitted,
+      [submissionKey]: true
+    };
+    setHomeworkSubmitted(newSubmissions);
+
+    const key = `techacademy_hw_${userEmail}_${courseId}`;
+    const saved = localStorage.getItem(key);
+    let currentHw = {};
+    if (saved) {
+      try { currentHw = JSON.parse(saved); } catch(e){}
+    }
+    currentHw[submissionKey] = true;
+    localStorage.setItem(key, JSON.stringify(currentHw));
+
+    showToast('Nộp bài tập thành công! Giảng viên sẽ chấm bài và phản hồi sớm.');
+    setHomeworkAnswer('');
+  };
+
+  const handleSelectLesson = (idx) => {
+    setActiveLessonIndex(idx);
+    setIsVideoPlaying(false);
+    setVideoProgress(0);
+    setHomeworkAnswer('');
+  };
 
   // Fetch all courses based on search & filter
   const fetchCourses = async () => {
@@ -255,6 +618,10 @@ export default function App() {
   const handleOpenDetails = (course) => {
     setSelectedCourse(course);
     fetchCourseDetails(course.id);
+    setActiveLessonIndex(null); // Show overview first
+    setIsVideoPlaying(false);
+    setVideoProgress(0);
+    setHomeworkAnswer('');
   };
 
   // Close course details modal
@@ -265,6 +632,11 @@ export default function App() {
     setReviewRating(5);
     setReviewError('');
     setReviewSuccess('');
+    // Reset learning states
+    setActiveLessonIndex(null);
+    setIsVideoPlaying(false);
+    setVideoProgress(0);
+    setHomeworkAnswer('');
   };
 
   // Submit a Review
@@ -406,7 +778,13 @@ export default function App() {
         throw new Error(data.message || 'Đăng ký khóa học thất bại');
       }
 
-      showToast(`Đăng ký khóa học thành công!`);
+      // BUG (Đăng ký): hiển thị thẳng số tiền backend trả về mà không định dạng,
+      // nên với mã giảm giá sẽ lòi ra số lẻ float (vd: $39.992000000000004).
+      let successMsg = 'Đăng ký khóa học thành công!';
+      if (data && data.amount > 0) {
+        successMsg += ` Số tiền đã thanh toán: $${data.amount}`;
+      }
+      showToast(successMsg);
       setShowCheckoutModal(false);
       
       // If we registered from details modal, refresh it
@@ -446,6 +824,9 @@ export default function App() {
     } else if (couponCode === 'FREE100') {
       setAppliedDiscount(1.0);
       setCouponSuccess('Áp dụng mã miễn phí 100% thành công!');
+    } else if (couponCode === 'GIAM20') {
+      setAppliedDiscount(0.2);
+      setCouponSuccess('Áp dụng mã giảm 20% thành công!');
     } else {
       setCouponError('Mã giảm giá không hợp lệ');
     }
@@ -539,7 +920,7 @@ export default function App() {
               onClick={() => setActiveTab('wishlist')}
               data-testid="wishlist-tab"
             >
-              Yêu thích
+              Yêu thích <span className="wishlist-badge" data-testid="wishlist-count-badge">({wishlist.length})</span>
             </span>
           )}
           {userEmail && (
@@ -914,13 +1295,247 @@ export default function App() {
               <div className="modal-meta-row">
                 <span>Giảng viên: <strong>{selectedCourseDetails.course.instructor}</strong></span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                  <Star size={16} fill="#fbbf24" color="#fbbf24" /> 
-                  <strong>{selectedCourseDetails.course.rating ? selectedCourseDetails.course.rating.toFixed(1) : "0.0"}</strong> 
+                  <Star size={16} fill="#fbbf24" color="#fbbf24" />
+                  {/* BUG (Đánh giá): trang chi tiết quên .toFixed(1) nên điểm trung bình
+                      hiện nguyên số thực, ví dụ 3.3333333333333335 thay vì 3.3 */}
+                  <strong>{selectedCourseDetails.course.rating ? selectedCourseDetails.course.rating : "0.0"}</strong>
                   ({selectedCourseDetails.course.reviews_count} đánh giá)
                 </span>
               </div>
 
               <p className="modal-description">{selectedCourseDetails.course.description}</p>
+
+              {isAlreadyRegistered(selectedCourseDetails.course.id) && (() => {
+                const courseId = selectedCourseDetails.course.id;
+                const lessons = COURSE_LESSONS[courseId] || [];
+                const completedList = completedLessons[courseId] || [];
+                const completedCount = completedList.length;
+                const progressPercentage = Math.round((completedCount / lessons.length) * 100) || 0;
+
+                const activeLesson = activeLessonIndex !== null ? lessons[activeLessonIndex] : null;
+
+                const formatTime = (secs) => {
+                  const m = Math.floor(secs / 60);
+                  const s = secs % 60;
+                  return `${m < 10 ? '0' : ''}${m}:${s < 10 ? '0' : ''}${s}`;
+                };
+
+                const getDurationSeconds = (durationStr) => {
+                  if (!durationStr) return 0;
+                  const parts = durationStr.split(':');
+                  return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+                };
+
+                return (
+                  <div className="course-learning-section" data-testid="course-learning-content">
+                    {/* Progress Header */}
+                    <div className="learning-header">
+                      <div className="learning-header-title">
+                        <Sparkles size={18} className="text-accent" />
+                        <h3>Học viện cá nhân (Course Learning Hub)</h3>
+                      </div>
+                      <div className="learning-progress-container">
+                        <div className="progress-info-row">
+                          <span>Tiến độ học tập: <strong>{completedCount}/{lessons.length}</strong> bài học ({progressPercentage}%)</span>
+                        </div>
+                        <div className="progress-bar-track">
+                          <div className="progress-bar-fill" style={{ width: `${progressPercentage}%` }}></div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Split Layout */}
+                    <div className="learning-split-layout">
+                      
+                      {/* Left Sidebar: Lessons List */}
+                      <div className="learning-sidebar">
+                        <div className="sidebar-title">Danh mục bài học</div>
+                        <div className="lessons-list">
+                          {lessons.map((lesson, idx) => {
+                            const isActive = activeLessonIndex === idx;
+                            const isCompleted = completedList.includes(idx);
+                            return (
+                              <div 
+                                key={idx} 
+                                className={`lesson-sidebar-item ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}
+                                onClick={() => handleSelectLesson(idx)}
+                                data-testid={`lesson-item-${idx}`}
+                              >
+                                <div className="lesson-status-icon">
+                                  {isCompleted ? (
+                                    <CheckCircle size={16} className="status-check" />
+                                  ) : (
+                                    <div className="status-dot"></div>
+                                  )}
+                                </div>
+                                <div className="lesson-info">
+                                  <div className="lesson-item-title">{lesson.title}</div>
+                                  <div className="lesson-item-duration">Thời lượng: {lesson.duration}</div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Right Workspace: Lesson Content */}
+                      <div className="learning-workspace">
+                        {activeLessonIndex === null ? (
+                          /* Overview Panel */
+                          <div className="workspace-overview-panel">
+                            <div className="overview-icon">🏆</div>
+                            <h4>Chào mừng bạn đến với khóa học!</h4>
+                            <p>Hãy chọn một bài học ở danh sách bên trái để bắt đầu xem video bài giảng, đọc tóm tắt lý thuyết, làm bài tập thực hành và ghi nhận tiến độ.</p>
+                            <button 
+                              className="btn-start-learning"
+                              onClick={() => handleSelectLesson(0)}
+                              data-testid="start-learning-btn"
+                            >
+                              Bắt đầu bài học đầu tiên
+                            </button>
+                          </div>
+                        ) : (
+                          /* Active Lesson Panel */
+                          <div className="workspace-active-lesson">
+                            {/* Header */}
+                            <div className="workspace-lesson-header">
+                              <button 
+                                className="btn-back-overview"
+                                onClick={() => setActiveLessonIndex(null)}
+                              >
+                                ← Quay lại tổng quan
+                              </button>
+                              <h4 className="active-lesson-title">{activeLesson.title}</h4>
+                              <div className="active-lesson-meta">Thời lượng: {activeLesson.duration}</div>
+                            </div>
+
+                            {/* Simulated Video Player */}
+                            <div className="video-player-mock">
+                              <div className="video-screen">
+                                {isVideoPlaying ? (
+                                  <div className="video-playing-state">
+                                    <div className="video-playing-anim">
+                                      <div className="wave-bar"></div>
+                                      <div className="wave-bar"></div>
+                                      <div className="wave-bar"></div>
+                                      <div className="wave-bar"></div>
+                                    </div>
+                                    <span className="video-playing-text">🎬 Đang phát video bài giảng...</span>
+                                  </div>
+                                ) : (
+                                  <div 
+                                    className="video-paused-state"
+                                    onClick={() => setIsVideoPlaying(true)}
+                                  >
+                                    <div className="btn-play-large">
+                                      <Play size={32} fill="currentColor" />
+                                    </div>
+                                    <span className="video-paused-text">
+                                      {videoProgress > 0 ? "Tạm dừng video" : "Nhấn Play để xem bài giảng"}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Controls */}
+                              <div className="video-controls">
+                                <button 
+                                  className="btn-video-control" 
+                                  onClick={() => setIsVideoPlaying(!isVideoPlaying)}
+                                  data-testid="video-play-toggle"
+                                >
+                                  {isVideoPlaying ? <Pause size={16} /> : <Play size={16} fill="currentColor" />}
+                                </button>
+                                
+                                <span className="video-timer">
+                                  {formatTime(videoProgress)} / {activeLesson.duration}
+                                </span>
+
+                                <div className="video-timeline-track" onClick={(e) => {
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  const clickX = e.clientX - rect.left;
+                                  const percentage = clickX / rect.width;
+                                  const maxSec = getDurationSeconds(activeLesson.duration);
+                                  setVideoProgress(Math.round(percentage * maxSec));
+                                }}>
+                                  <div 
+                                    className="video-timeline-fill" 
+                                    style={{ width: `${(videoProgress / getDurationSeconds(activeLesson.duration)) * 100}%` }}
+                                  ></div>
+                                </div>
+
+                                <button 
+                                  className="btn-video-control"
+                                  onClick={() => setVideoProgress(0)}
+                                >
+                                  <RotateCcw size={16} />
+                                </button>
+                                
+                                <Volume2 size={16} className="text-muted" style={{ marginLeft: '0.5rem' }} />
+                              </div>
+                            </div>
+
+                            {/* Lesson theory content */}
+                            <div className="lesson-theory-content">
+                              <h5>📖 Tóm tắt bài học</h5>
+                              <p>{activeLesson.content}</p>
+                            </div>
+
+                            {/* Homework Box */}
+                            <div className="homework-box">
+                              <h5>✍️ Bài tập thực hành</h5>
+                              <p className="homework-prompt"><strong>Yêu cầu:</strong> {activeLesson.exercise}</p>
+                              
+                              {homeworkSubmitted[`${courseId}-${activeLessonIndex}`] ? (
+                                <div className="homework-status-submitted" data-testid="homework-submitted-alert">
+                                  <CheckCircle size={16} />
+                                  <span>Bài tập của bạn đã được nộp thành công!</span>
+                                </div>
+                              ) : (
+                                <div className="homework-form">
+                                  <textarea 
+                                    className="homework-textarea"
+                                    placeholder="Nhập câu trả lời hoặc code thực hành của bạn vào đây..."
+                                    value={homeworkAnswer}
+                                    onChange={(e) => setHomeworkAnswer(e.target.value)}
+                                    data-testid="homework-input"
+                                  />
+                                  <button 
+                                    className="btn-submit-homework"
+                                    onClick={() => handleSubmitHomework(courseId, activeLessonIndex)}
+                                    data-testid="submit-homework-btn"
+                                  >
+                                    <Send size={14} />
+                                    <span>Nộp bài giải</span>
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Completion Check */}
+                            <div className="lesson-completion-panel">
+                              <button 
+                                className={`btn-toggle-complete ${completedList.includes(activeLessonIndex) ? 'completed' : ''}`}
+                                onClick={() => handleToggleLessonCompleted(courseId, activeLessonIndex)}
+                                data-testid="toggle-lesson-complete-btn"
+                              >
+                                <CheckCircle size={16} />
+                                <span>
+                                  {completedList.includes(activeLessonIndex) 
+                                    ? "Đánh dấu là chưa hoàn thành" 
+                                    : "Hoàn thành bài học này"}
+                                </span>
+                              </button>
+                            </div>
+
+                          </div>
+                        )}
+                      </div>
+
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Action / Checkout status in modal */}
               <div className="checkout-panel">
@@ -1033,7 +1648,13 @@ export default function App() {
                             <span className="review-date">{new Date(rev.created_at).toLocaleDateString('vi-VN')}</span>
                           </div>
                         </div>
-                        <p className="review-comment" data-testid="review-comment-text">{rev.comment || "(Không có bình luận)"}</p>
+                        <p 
+                          className="review-comment" 
+                          data-testid="review-comment-text"
+                          dangerouslySetInnerHTML={{
+                            __html: rev.comment ? rev.comment.replace(/\n/g, '<br />') : "(Không có bình luận)"
+                          }}
+                        />
                       </div>
                     ))
                   ) : (

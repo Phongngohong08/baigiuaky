@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -15,7 +16,21 @@ import (
 func EnableCors(w *http.ResponseWriter) {
 	(*w).Header().Set("Access-Control-Allow-Origin", "*")
 	(*w).Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, DELETE")
-	(*w).Header().Set("Access-Control-Allow-Headers", "Content-Type, X-User-Email, Authorization")
+	(*w).Header().Set("Access-Control-Allow-Headers", "Content-Type, X-User-Email, Authorization, X-Admin-Key")
+}
+
+// adminKey returns the secret key required for /api/admin/* endpoints.
+// It can be overridden via the ADMIN_KEY environment variable.
+func adminKey() string {
+	if k := os.Getenv("ADMIN_KEY"); k != "" {
+		return k
+	}
+	return "admin@123"
+}
+
+// adminAuthorized reports whether the request carries a valid admin key header.
+func adminAuthorized(r *http.Request) bool {
+	return r.Header.Get("X-Admin-Key") == adminKey()
 }
 
 func CoursesHandler(w http.ResponseWriter, r *http.Request) {
@@ -42,21 +57,18 @@ func CoursesHandler(w http.ResponseWriter, r *http.Request) {
 
 	db := database.DB
 
-	// Build query
+	// Category and price filters are applied in SQL (parameterized to stay
+	// injection-safe). The keyword search is applied in Go afterwards so it can be
+	// accent- and case-insensitive across Unicode, which SQLite's LIKE cannot do.
 	queryStr := "SELECT id, title, description, instructor, price, category, rating, reviews_count, image_url FROM courses WHERE 1=1"
 	var args []interface{}
 
-	if q != "" {
-		queryStr += " AND (title LIKE ? OR description LIKE ?)"
-		args = append(args, "%"+q+"%", "%"+q+"%")
-	}
-
+	// BUG (Tìm kiếm): bộ lọc danh mục và mức giá đáng lẽ là hai điều kiện độc lập,
+	// nhưng ở đây dùng else-if nên khi đã chọn danh mục thì bộ lọc giá bị bỏ qua.
 	if category != "" {
 		queryStr += " AND category = ?"
 		args = append(args, category)
-	}
-
-	if priceType == "free" {
+	} else if priceType == "free" {
 		queryStr += " AND price = 0"
 	} else if priceType == "paid" {
 		queryStr += " AND price > 0"
@@ -69,6 +81,11 @@ func CoursesHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 
+	// Tokenize the keyword once. An empty raw query returns everything; a query that
+	// is only whitespace yields zero tokens and is treated as "no match".
+	tokens := strings.Fields(normalize(q))
+	hasQuery := q != ""
+
 	var courses []models.Course
 	for rows.Next() {
 		var c models.Course
@@ -77,6 +94,17 @@ func CoursesHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+
+		if hasQuery {
+			if len(tokens) == 0 {
+				continue // whitespace-only query matches nothing
+			}
+			haystack := normalize(c.Title + " " + c.Description + " " + c.Instructor + " " + c.Category)
+			if !matchesQuery(haystack, tokens) {
+				continue
+			}
+		}
+
 		courses = append(courses, c)
 	}
 
@@ -321,6 +349,7 @@ func RegisterCourseHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Coupon code checks (TC-28, TC-29)
+	var discount float64
 	if req.Coupon != "" {
 		if req.Coupon == "EXPIRED" {
 			w.Header().Set("Content-Type", "application/json")
@@ -328,21 +357,29 @@ func RegisterCourseHandler(w http.ResponseWriter, r *http.Request) {
 			json.NewEncoder(w).Encode(map[string]string{"message": "Mã giảm giá đã hết hạn"})
 			return
 		}
-		if req.Coupon != "GIAM50" && req.Coupon != "FREE100" {
+		// In real-world enterprise apps, active coupons are retrieved from database or cache.
+		// For simulation, we define the current active promo campaigns.
+		activeCoupons := map[string]float64{
+			"GIAM20":  0.20,
+			"GIAM50":  0.50,
+			"FREE100": 1.00,
+		}
+		d, isValid := activeCoupons[req.Coupon]
+		if !isValid {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(map[string]string{"message": "Mã giảm giá không hợp lệ"})
+			json.NewEncoder(w).Encode(map[string]string{"message": "Mã giảm giá không hợp lệ hoặc đã hết hạn"})
 			return
 		}
+		discount = d
 	}
 
 	status := "completed"
 	if price > 0 {
 		// Paid course registration
-		// TC-30 Bug: Backend accepts registration even if payment is cancelled!
+		// We correctly process payment cancel state.
 		if req.PaymentStatus == "cancelled" {
-			// Bug: Instead of rejecting, we save it as "completed" anyway!
-			status = "completed"
+			status = "cancelled"
 		} else if req.PaymentStatus == "completed" {
 			status = "completed"
 		} else {
@@ -359,11 +396,16 @@ func RegisterCourseHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// BUG (Đăng ký): số tiền thực thu được tính trực tiếp bằng float và KHÔNG làm tròn
+	// 2 chữ số thập phân, nên 49.99 * 0.8 = 39.992000000000004 sẽ lọt ra giao diện.
+	charged := price * (1 - discount)
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]string{
+	json.NewEncoder(w).Encode(map[string]interface{}{
 		"message": "Đăng ký thành công",
 		"status":  status,
+		"amount":  charged,
 	})
 }
 
@@ -387,8 +429,11 @@ func MyCoursesHandler(w http.ResponseWriter, r *http.Request) {
 
 	db := database.DB
 
+	// BUG (Đăng ký): chỉ lấy đăng ký ở trạng thái 'completed'. Khóa trả phí đang chờ
+	// xác nhận thanh toán ('pending') bị loại khỏi danh sách, khiến học viên đã đăng ký
+	// nhưng không thấy khóa học của mình -> tưởng nhầm là đăng ký thất bại.
 	rows, err := db.Query(`
-		SELECT c.id, c.title, c.description, c.instructor, c.price, c.category, c.rating, c.reviews_count, c.image_url 
+		SELECT c.id, c.title, c.description, c.instructor, c.price, c.category, c.rating, c.reviews_count, c.image_url
 		FROM courses c
 		JOIN registrations r ON c.id = r.course_id
 		WHERE r.user_email = ? AND r.status = 'completed'
@@ -541,6 +586,398 @@ func ToggleWishlistHandler(w http.ResponseWriter, r *http.Request) {
 		"action":  "added",
 		"message": "Đã thêm vào danh sách yêu thích",
 	})
+}
+
+// AdminStatsHandler returns aggregated data for the hidden /admin dashboard.
+// It is intentionally reachable only by typing the URL (no navigation link in the UI).
+func AdminStatsHandler(w http.ResponseWriter, r *http.Request) {
+	EnableCors(&w)
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
+	if !adminAuthorized(r) {
+		http.Error(w, "Unauthorized: invalid admin key", http.StatusUnauthorized)
+		return
+	}
+
+	if r.Method != "GET" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	db := database.DB
+
+	var totalCourses, totalRegs, totalCompleted, totalReviews, totalWishlist int
+	_ = db.QueryRow("SELECT COUNT(*) FROM courses").Scan(&totalCourses)
+	_ = db.QueryRow("SELECT COUNT(*) FROM registrations").Scan(&totalRegs)
+	_ = db.QueryRow("SELECT COUNT(*) FROM registrations WHERE status = 'completed'").Scan(&totalCompleted)
+	_ = db.QueryRow("SELECT COUNT(*) FROM reviews").Scan(&totalReviews)
+	_ = db.QueryRow("SELECT COUNT(*) FROM wishlist").Scan(&totalWishlist)
+
+	var revenue float64
+	_ = db.QueryRow(`
+		SELECT IFNULL(SUM(c.price), 0)
+		FROM registrations r JOIN courses c ON c.id = r.course_id
+		WHERE r.status = 'completed'
+	`).Scan(&revenue)
+
+	// Per-course statistics (include full fields so the admin edit form is pre-filled)
+	courseRows, err := db.Query(`
+		SELECT c.id, c.title, c.description, c.instructor, c.category, c.price, c.rating, c.reviews_count, c.image_url,
+			(SELECT COUNT(*) FROM registrations r WHERE r.course_id = c.id) AS reg_count,
+			(SELECT COUNT(*) FROM registrations r WHERE r.course_id = c.id AND r.status = 'completed') AS completed_count
+		FROM courses c
+		ORDER BY c.id
+	`)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer courseRows.Close()
+
+	courses := []map[string]interface{}{}
+	for courseRows.Next() {
+		var id, reviewsCount, regCount, completedCount int
+		var title, description, instructor, category, imageURL string
+		var price, rating float64
+		if err := courseRows.Scan(&id, &title, &description, &instructor, &category, &price, &rating, &reviewsCount, &imageURL, &regCount, &completedCount); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		courses = append(courses, map[string]interface{}{
+			"id":            id,
+			"title":         title,
+			"description":   description,
+			"instructor":    instructor,
+			"category":      category,
+			"price":         price,
+			"rating":        rating,
+			"reviews_count": reviewsCount,
+			"image_url":     imageURL,
+			"registrations": regCount,
+			"completed":     completedCount,
+		})
+	}
+
+	// Recent registrations
+	regRows, err := db.Query(`
+		SELECT r.id, r.user_email, r.status, c.title
+		FROM registrations r JOIN courses c ON c.id = r.course_id
+		ORDER BY r.id DESC
+		LIMIT 50
+	`)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer regRows.Close()
+
+	registrations := []map[string]interface{}{}
+	for regRows.Next() {
+		var id int
+		var userEmail, status, courseTitle string
+		if err := regRows.Scan(&id, &userEmail, &status, &courseTitle); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		registrations = append(registrations, map[string]interface{}{
+			"id":         id,
+			"user_email": userEmail,
+			"status":     status,
+			"course":     courseTitle,
+		})
+	}
+
+	// Recent reviews (for moderation)
+	reviewRows, err := db.Query(`
+		SELECT r.id, r.user_email, r.rating, r.comment, c.title
+		FROM reviews r JOIN courses c ON c.id = r.course_id
+		ORDER BY r.id DESC
+		LIMIT 50
+	`)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer reviewRows.Close()
+
+	reviews := []map[string]interface{}{}
+	for reviewRows.Next() {
+		var id, rating int
+		var userEmail, comment, courseTitle string
+		if err := reviewRows.Scan(&id, &userEmail, &rating, &comment, &courseTitle); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		reviews = append(reviews, map[string]interface{}{
+			"id":         id,
+			"user_email": userEmail,
+			"rating":     rating,
+			"comment":    comment,
+			"course":     courseTitle,
+		})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"totals": map[string]interface{}{
+			"courses":                 totalCourses,
+			"registrations":           totalRegs,
+			"completed_registrations": totalCompleted,
+			"reviews":                 totalReviews,
+			"wishlist":                totalWishlist,
+			"revenue":                 revenue,
+		},
+		"courses":       courses,
+		"registrations": registrations,
+		"reviews":       reviews,
+	})
+}
+
+// AdminCreateCourseHandler creates a new course. (POST /api/admin/courses)
+func AdminCreateCourseHandler(w http.ResponseWriter, r *http.Request) {
+	EnableCors(&w)
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	if !adminAuthorized(r) {
+		http.Error(w, "Unauthorized: invalid admin key", http.StatusUnauthorized)
+		return
+	}
+	if r.Method != "POST" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var c models.Course
+	if err := json.NewDecoder(r.Body).Decode(&c); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+	c.Title = strings.TrimSpace(c.Title)
+	c.Category = strings.TrimSpace(c.Category)
+	if c.Title == "" || c.Category == "" {
+		http.Error(w, "Tiêu đề và danh mục không được để trống", http.StatusBadRequest)
+		return
+	}
+	if c.Price < 0 {
+		http.Error(w, "Giá không hợp lệ", http.StatusBadRequest)
+		return
+	}
+	if strings.TrimSpace(c.Instructor) == "" {
+		c.Instructor = "Đang cập nhật"
+	}
+	if strings.TrimSpace(c.ImageURL) == "" {
+		c.ImageURL = "/images/go.svg"
+	}
+
+	db := database.DB
+	res, err := db.Exec(
+		"INSERT INTO courses (title, description, instructor, price, category, rating, reviews_count, image_url) VALUES (?, ?, ?, ?, ?, 0, 0, ?)",
+		c.Title, c.Description, c.Instructor, c.Price, c.Category, c.ImageURL,
+	)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	id, _ := res.LastInsertId()
+	c.ID = int(id)
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(c)
+}
+
+// AdminUpdateCourseHandler updates an existing course. (PUT /api/admin/courses/{id})
+func AdminUpdateCourseHandler(w http.ResponseWriter, r *http.Request) {
+	EnableCors(&w)
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	if !adminAuthorized(r) {
+		http.Error(w, "Unauthorized: invalid admin key", http.StatusUnauthorized)
+		return
+	}
+	if r.Method != "PUT" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "Invalid course ID", http.StatusBadRequest)
+		return
+	}
+
+	var c models.Course
+	if err := json.NewDecoder(r.Body).Decode(&c); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+	c.Title = strings.TrimSpace(c.Title)
+	c.Category = strings.TrimSpace(c.Category)
+	if c.Title == "" || c.Category == "" {
+		http.Error(w, "Tiêu đề và danh mục không được để trống", http.StatusBadRequest)
+		return
+	}
+	if c.Price < 0 {
+		http.Error(w, "Giá không hợp lệ", http.StatusBadRequest)
+		return
+	}
+
+	db := database.DB
+	// Keep the existing image if none was provided.
+	if strings.TrimSpace(c.ImageURL) == "" {
+		_ = db.QueryRow("SELECT image_url FROM courses WHERE id = ?", id).Scan(&c.ImageURL)
+	}
+
+	res, err := db.Exec(
+		"UPDATE courses SET title = ?, description = ?, instructor = ?, price = ?, category = ?, image_url = ? WHERE id = ?",
+		c.Title, c.Description, c.Instructor, c.Price, c.Category, c.ImageURL, id,
+	)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		http.Error(w, "Course not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "Đã cập nhật khóa học"})
+}
+
+// AdminDeleteCourseHandler deletes a course and all its related data. (DELETE /api/admin/courses/{id})
+func AdminDeleteCourseHandler(w http.ResponseWriter, r *http.Request) {
+	EnableCors(&w)
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	if !adminAuthorized(r) {
+		http.Error(w, "Unauthorized: invalid admin key", http.StatusUnauthorized)
+		return
+	}
+	if r.Method != "DELETE" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "Invalid course ID", http.StatusBadRequest)
+		return
+	}
+
+	db := database.DB
+	// SQLite has no cascade here, so remove dependents first to avoid orphan rows.
+	_, _ = db.Exec("DELETE FROM wishlist WHERE course_id = ?", id)
+	_, _ = db.Exec("DELETE FROM registrations WHERE course_id = ?", id)
+	_, _ = db.Exec("DELETE FROM reviews WHERE course_id = ?", id)
+	res, err := db.Exec("DELETE FROM courses WHERE id = ?", id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		http.Error(w, "Course not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "Đã xóa khóa học"})
+}
+
+// AdminDeleteReviewHandler removes a review and recalculates the course rating. (DELETE /api/admin/reviews/{id})
+func AdminDeleteReviewHandler(w http.ResponseWriter, r *http.Request) {
+	EnableCors(&w)
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	if !adminAuthorized(r) {
+		http.Error(w, "Unauthorized: invalid admin key", http.StatusUnauthorized)
+		return
+	}
+	if r.Method != "DELETE" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "Invalid review ID", http.StatusBadRequest)
+		return
+	}
+
+	db := database.DB
+	var courseID int
+	if err := db.QueryRow("SELECT course_id FROM reviews WHERE id = ?", id).Scan(&courseID); err == sql.ErrNoRows {
+		http.Error(w, "Review not found", http.StatusNotFound)
+		return
+	} else if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if _, err := db.Exec("DELETE FROM reviews WHERE id = ?", id); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Recalculate average rating and review count for the affected course.
+	_, _ = db.Exec(`
+		UPDATE courses
+		SET
+			rating = (SELECT IFNULL(AVG(rating), 0) FROM reviews WHERE reviews.course_id = courses.id),
+			reviews_count = (SELECT COUNT(*) FROM reviews WHERE reviews.course_id = courses.id)
+		WHERE id = ?
+	`, courseID)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "Đã xóa đánh giá"})
+}
+
+// AdminDeleteRegistrationHandler removes a registration record. (DELETE /api/admin/registrations/{id})
+func AdminDeleteRegistrationHandler(w http.ResponseWriter, r *http.Request) {
+	EnableCors(&w)
+	if r.Method == "OPTIONS" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	if !adminAuthorized(r) {
+		http.Error(w, "Unauthorized: invalid admin key", http.StatusUnauthorized)
+		return
+	}
+	if r.Method != "DELETE" {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		http.Error(w, "Invalid registration ID", http.StatusBadRequest)
+		return
+	}
+
+	db := database.DB
+	res, err := db.Exec("DELETE FROM registrations WHERE id = ?", id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		http.Error(w, "Registration not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "Đã xóa đăng ký"})
 }
 
 func WishlistHandler(w http.ResponseWriter, r *http.Request) {

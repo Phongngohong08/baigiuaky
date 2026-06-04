@@ -51,6 +51,22 @@ func main() {
 	mux.HandleFunc("POST /api/reset", handlers.ResetHandler)
 	mux.HandleFunc("OPTIONS /api/reset", handlers.ResetHandler)
 
+	mux.HandleFunc("GET /api/admin/stats", handlers.AdminStatsHandler)
+	mux.HandleFunc("OPTIONS /api/admin/stats", handlers.AdminStatsHandler)
+
+	mux.HandleFunc("POST /api/admin/courses", handlers.AdminCreateCourseHandler)
+	mux.HandleFunc("OPTIONS /api/admin/courses", handlers.AdminCreateCourseHandler)
+
+	mux.HandleFunc("PUT /api/admin/courses/{id}", handlers.AdminUpdateCourseHandler)
+	mux.HandleFunc("DELETE /api/admin/courses/{id}", handlers.AdminDeleteCourseHandler)
+	mux.HandleFunc("OPTIONS /api/admin/courses/{id}", handlers.AdminDeleteCourseHandler)
+
+	mux.HandleFunc("DELETE /api/admin/reviews/{id}", handlers.AdminDeleteReviewHandler)
+	mux.HandleFunc("OPTIONS /api/admin/reviews/{id}", handlers.AdminDeleteReviewHandler)
+
+	mux.HandleFunc("DELETE /api/admin/registrations/{id}", handlers.AdminDeleteRegistrationHandler)
+	mux.HandleFunc("OPTIONS /api/admin/registrations/{id}", handlers.AdminDeleteRegistrationHandler)
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
