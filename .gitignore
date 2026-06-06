@@ -47,6 +47,7 @@ Thumbs.db
 .env.test.local
 .env.production.local
 
-# Document files
+# Document files (sinh ra bởi script trong baocao/)
 *.xlsx
 *.docx
+*.pptx
