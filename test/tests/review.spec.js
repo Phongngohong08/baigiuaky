@@ -11,7 +11,7 @@ test.describe('Feature 2: Course Reviews', () => {
   
   test.beforeEach(async ({ page, request }) => {
     // Reset database state before each test
-    const resetRes = await request.post('http://127.0.0.1:8080/api/reset');
+    const resetRes = await request.post('https://khoahoc.phongngohong.online/api/reset');
     expect(resetRes.ok()).toBeTruthy();
     
     // Go to homepage
@@ -72,7 +72,7 @@ test.describe('Feature 2: Course Reviews', () => {
     await page.locator('[data-testid="course-detail-btn-1"]').click();
     
     // We call the API directly using request to test boundary value 0 stars
-    const res = await page.request.post('http://127.0.0.1:8080/api/courses/1/reviews', {
+    const res = await page.request.post('https://khoahoc.phongngohong.online/api/courses/1/reviews', {
       headers: { 'X-User-Email': 'student5@gmail.com' },
       data: { rating: 0, comment: 'Không chọn sao nào' }
     });

@@ -11,7 +11,7 @@ test.describe('Feature 3: Course Registration & Checkout', () => {
   
   test.beforeEach(async ({ page, request }) => {
     // Reset database state before each test
-    const resetRes = await request.post('http://127.0.0.1:8080/api/reset');
+    const resetRes = await request.post('https://khoahoc.phongngohong.online/api/reset');
     expect(resetRes.ok()).toBeTruthy();
     
     // Go to homepage
@@ -86,7 +86,7 @@ test.describe('Feature 3: Course Registration & Checkout', () => {
     await expect(page.locator('[data-testid="registered-badge-1"]')).toBeVisible();
     
     // Directly calling API to try registering again should fail
-    const res = await page.request.post('http://127.0.0.1:8080/api/courses/1/register', {
+    const res = await page.request.post('https://khoahoc.phongngohong.online/api/courses/1/register', {
       headers: { 'X-User-Email': 'student5@gmail.com' }
     });
     expect(res.status()).toBe(400);
@@ -138,10 +138,10 @@ test.describe('Feature 3: Course Registration & Checkout', () => {
   test('TC-31: Maximum student limit validation', async ({ page, request }) => {
     // Course ID 5 (Docker) has limit of 2 registrations.
     // Register 2 other accounts directly via API
-    await request.post('http://127.0.0.1:8080/api/courses/5/register', {
+    await request.post('https://khoahoc.phongngohong.online/api/courses/5/register', {
       headers: { 'X-User-Email': 'other1@gmail.com' }
     });
-    await request.post('http://127.0.0.1:8080/api/courses/5/register', {
+    await request.post('https://khoahoc.phongngohong.online/api/courses/5/register', {
       headers: { 'X-User-Email': 'other2@gmail.com' }
     });
     
@@ -406,14 +406,14 @@ test.describe('Feature 3: Course Registration & Checkout', () => {
     const email = 'studentpending@gmail.com';
 
     // Đăng ký khóa trả phí (course 2) ở trạng thái chờ thanh toán
-    const reg = await request.post('http://127.0.0.1:8080/api/courses/2/register', {
+    const reg = await request.post('https://khoahoc.phongngohong.online/api/courses/2/register', {
       headers: { 'X-User-Email': email },
       data: { payment_status: 'pending' }
     });
     expect(reg.status()).toBe(201);
 
     // Học viên đã đăng ký nên khóa phải có trong danh sách khóa học của họ.
-    const res = await request.get('http://127.0.0.1:8080/api/my-courses', {
+    const res = await request.get('https://khoahoc.phongngohong.online/api/my-courses', {
       headers: { 'X-User-Email': email }
     });
     const data = await res.json();

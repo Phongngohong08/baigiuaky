@@ -458,7 +458,7 @@ test.describe('Feature 1: Course Search & Filters', () => {
 
   test.beforeEach(async ({ page, request }) => {
     // Khôi phục trạng thái database trước mỗi test
-    const resetRes = await request.post('http://127.0.0.1:8080/api/reset');
+    const resetRes = await request.post('https://khoahoc.phongngohong.online/api/reset');
     expect(resetRes.ok()).toBeTruthy();
     await page.goto('/');  // mở trang chủ
   });
